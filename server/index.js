@@ -6,7 +6,7 @@
 require('dotenv').config();
 
 const express = require('express');
-// Запросы к браузеру
+//  Todo расписать, что такое корсы + добавить это в текст контрольной
 const cors = require('cors');
 // Конфигуратор подключения к базе данных
 const sequelize = require('./db');

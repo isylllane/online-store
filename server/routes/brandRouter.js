@@ -11,9 +11,12 @@ const router = new Router();
 
 const brandController = require('../controllers/brandController');
 const checkRole = require('../middleware/checkRoleMiddleware');
-
-router.post('/', checkRole('ADMIN'), brandController.create);
+const roles = require('../enums.js');
+// POST / - Создание бренда
+router.post('/', checkRole(roles.admin), brandController.create);
+// GET / - Получение брендов
 router.get('/', brandController.getAll);
-router.delete('/:id', checkRole('ADMIN'), brandController.deleteOne);
+// DELETE /:id - Удаление бренда
+router.delete('/:id', checkRole(roles.admin), brandController.deleteOne);
 
 module.exports = router;

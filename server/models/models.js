@@ -12,6 +12,8 @@ const User = sequelize.define('user', {
     email: {type: DataTypes.STRING, unique: true, allowNull: false},
     password: {type: DataTypes.STRING, allowNull: false},
     role: {type: DataTypes.STRING, defaultValue: "USER"},
+    personalDataConsent: { type: DataTypes.BOOLEAN, defaultValue: false }
+    // todo Добавить галочку
 })
 
 const Basket = sequelize.define('basket', {

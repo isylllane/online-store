@@ -32,7 +32,6 @@ class DeviceController {
             img.mv(path.resolve(__dirname, '..', 'static', fileName));
 
             const device = await Device.create({name, price, brandId, typeId, img: fileName});
-
             if (info) {
                 info = JSON.parse(info)
                 info.forEach(i =>

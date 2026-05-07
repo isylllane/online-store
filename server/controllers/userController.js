@@ -11,7 +11,7 @@
 const ApiError = require('../error/ApiError');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const {User, Basket} = require('../models/models');
+const {User, Basket, Type} = require('../models/models');
 
 const generateJwt = (id, email, role) => {
     return jwt.sign({id, email, role},
@@ -20,24 +20,24 @@ const generateJwt = (id, email, role) => {
     )
 }
 
-
+// todo использование персональных данных галочка
 class UserController {
     async registration(req, res, next) {
-
         try {
-            const {email, password, role} = req.body;
-
+            const {email, password, role, personalDataConsent} = req.body;
             if (!email || !password) {
                 return next(ApiError.badRequest('Некорректный email или пароль'));
             }
-
+            if (!personalDataConsent) {
+                return next(ApiError.badRequest('Необходимо дать согласие на обработку персональных данных'));
+            }
             const candidate = await User.findOne({where: { email } });
             if (candidate) {
                 return next(ApiError.badRequest('Пользователь с таким email уже существует'));
             }
 
             const hashPassword = await bcrypt.hash(password, 5);
-            const user = await User.create({email, role, password: hashPassword});
+            const user = await User.create({email, role, password: hashPassword,  personalDataConsent: personalDataConsent});
             await Basket.create({userId: user.id});
 
             const token = generateJwt(user.id, user.email, user.role);
@@ -78,11 +78,33 @@ class UserController {
             if (!req.user) {
                 return next(ApiError.forbidden('Пользователь не авторизован'));
             }
-
             const token = generateJwt(req.user.id, req.user.email, req.user.role);
             return res.json({ token });
         } catch (err) {
             return next(ApiError.internal('Ошибка при проверке токена'));
+        }
+    }
+    // todo показать
+    async getAll(req, res, next) {
+        try {
+            const users = await User.findAll({attributes: { exclude: ['password'] }});
+            return res.json(users);
+        } catch (err) {
+            return next(ApiError.internal('Ошибка при получении списка пользователей'));
+        }
+    }
+    async getOne(req, res, next) {
+        try {
+            const {id} = req.params;
+            const user = await User.findByPk(id, {
+                attributes: { exclude: ['password'] } // Не возвращаем пароль
+            });
+            if (!user) {
+                return next(ApiError.badRequest('Пользователь не найден'));
+            }
+            return res.json(user);
+        } catch (err) {
+            return next(ApiError.internal('Ошибка при получении данных пользователя'));
         }
     }
 }
