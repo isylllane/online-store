@@ -4,6 +4,7 @@
  * - create - Создание электроники
  * - getAll - Получение всей электроники (с пагинацией и фильтрацией)
  * - getOne - Получение конкретной электроники
+ * - deleteOne - Удаление электроники
  */
 
 const uuid = require('uuid');
@@ -15,6 +16,10 @@ const {DeviceInfo} = require('../models/models');
 class DeviceController {
     async create(req, res, next) {
         try {
+            console.log('=== ПОЛУЧЕНЫ ДАННЫЕ ===');
+            console.log('Body:', req.body);
+            console.log('Files:', req.files);
+            console.log('Info:', req.body.info);
             let {name, price, brandId, typeId, info} = req.body
             // Проверка обязательных полей
             if (!name || !price || !brandId || !typeId) {
@@ -24,8 +29,8 @@ class DeviceController {
 
             // Проверка формата файла
             const fileExtension = path.extname(img.name).toLowerCase();
-            if (fileExtension !== '.jpg') {
-                return next(ApiError.badRequest('Допустимы только jpg-файлы'));
+            if (fileExtension !== '.jpg' && fileExtension !== '.jpeg') {
+                return next(ApiError.badRequest('Допустимы только jpg/jpeg файлы'));
             }
 
             let fileName = uuid.v4() + fileExtension;
@@ -91,6 +96,56 @@ class DeviceController {
             return res.json(device);
         } catch (err) {
             return next(ApiError.internal('Не удалось получить товар'));
+        }
+    }
+    // НОВЫЙ МЕТОД ДЛЯ УДАЛЕНИЯ
+    async deleteOne(req, res, next) {
+        try {
+            const { id } = req.params;
+
+            console.log('Удаление товара с ID:', id);
+
+            // Сначала находим товар, чтобы получить имя файла изображения
+            const device = await Device.findOne({ where: { id } });
+
+            if (!device) {
+                return next(ApiError.badRequest('Товар не найден'));
+            }
+
+            console.log('Найден товар:', device.name);
+            console.log('Изображение:', device.img);
+
+            // Удаляем изображение из папки static, если оно существует
+            if (device.img) {
+                const imagePath = path.resolve(__dirname, '..', 'static', device.img);
+                console.log('Путь к изображению:', imagePath);
+
+                // Проверяем существует ли файл
+                const fs = require('fs');
+                if (fs.existsSync(imagePath)) {
+                    fs.unlinkSync(imagePath);
+                    console.log(`Изображение ${device.img} удалено`);
+                } else {
+                    console.log(`Файл изображения не найден: ${imagePath}`);
+                }
+            }
+
+            // Удаляем характеристики товара
+            const deletedInfo = await DeviceInfo.destroy({ where: { deviceId: id } });
+            console.log(`Удалено характеристик: ${deletedInfo}`);
+
+            // Удаляем сам товар
+            const deleted = await Device.destroy({ where: { id } });
+            console.log(`Товар удален: ${deleted}`);
+
+            return res.json({
+                message: 'Товар успешно удалён',
+                id: Number(id)
+            });
+
+        } catch (err) {
+            console.error('Ошибка при удалении товара:', err);
+            return next(ApiError.internal('Не удалось удалить товар: ' + err.message));
         }
     }
 }
